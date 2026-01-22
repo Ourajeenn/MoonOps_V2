@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # PostgreSQL pour l'application
+  postgres-app:
+    image: postgres:latest
+    container_name: moonops-postgres-app
+    restart: always
+    environment:
+      POSTGRES_DB: moonops_appdb
+      POSTGRES_USER: moonops_app
+      POSTGRES_PASSWORD: moonops_app_2026!
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - moonops-postgres-app-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - moonops-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moonops_app -d moonops_appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # GitLab CE avec sa propre base de données interne
+  gitlab:
+    image: gitlab/gitlab-ce:latest
+    container_name: moonops-gitlab
+    restart: always
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        gitlab_rails['gitlab_shell_ssh_port'] = 22
+        external_url 'http://localhost'
+        gitlab_rails['initial_root_password'] = 'moonops2026!'
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2222:22"
+    volumes:
+      - moonops-gitlab-config:/etc/gitlab
+      - moonops-gitlab-logs:/var/log/gitlab
+      - moonops-gitlab-data:/var/opt/gitlab
+    networks:
+      - moonops-network
+    shm_size: 256m
+
+volumes:
+  moonops-postgres-app-data:
+    driver: local
+  moonops-gitlab-config:
+    driver: local
+  moonops-gitlab-logs:
+    driver: local
+  moonops-gitlab-data:
+    driver: local
+
+networks:
+  moonops-network:
+    driver: bridge
+    name: moonops-network
